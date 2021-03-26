@@ -50,7 +50,7 @@ def main():
         # The IV will be stored as the second block of the ciphertext
         counter = 0
 
-        IV = nonce + int.to_bytes(counter, 4, "big")
+        IV = nonce + counter.to_bytes(4, "big")
 
         # Start ChaCha20 cipher
         cipher = ChaCha20(password_str=passwd, salt=salt, nonce=nonce)
