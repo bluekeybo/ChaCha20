@@ -1,12 +1,16 @@
 import numpy as np
 import struct
 import hashlib
+import warnings
 
 # ChaCha20 Matrix: 16 words, 32-bits each (4 bytes each) for a total of 64-bytes
 # cccccccc  cccccccc  cccccccc  cccccccc    #constants
 # kkkkkkkk  kkkkkkkk  kkkkkkkk  kkkkkkkk    #key
 # kkkkkkkk  kkkkkkkk  kkkkkkkk  kkkkkkkk    #key
 # bbbbbbbb  nnnnnnnn  nnnnnnnn  nnnnnnnn    #block_number and nonce
+
+# Disable overflow warnings for numpy uint as we need the overflow in ChaCha20's addition
+warnings.filterwarnings("ignore")
 
 
 class ChaCha20:
@@ -39,24 +43,23 @@ class ChaCha20:
         # Add the 12-byte nonce
         self.matrix[13:] = struct.unpack("<3L", self.nonce)
 
-    def circular_left(self, num, i):
-        num = np.binary_repr(num, self.key_size)
-        val = num * 2
-        return np.uint32(int(val[i : i + self.key_size], 2))
-
     def quarterround(self, a, b, c, d):
-        a = np.add(a, b).astype(np.uint32)
+        def circular_left(num, i):
+            return ((num << i) & 0xFFFFFFFF) | (num >> (32 - i))
+
+        # a, b, c, d are numpy uint32. The addition may overflow which is ok for ChaCha20
+        a += b
         d ^= a
-        d = self.circular_left(d, 16)
-        c = np.add(c, d).astype(np.uint32)
+        d = circular_left(d, 16)
+        c += d
         b ^= c
-        b = self.circular_left(b, 12)
-        a = np.add(a, b).astype(np.uint32)
+        b = circular_left(b, 12)
+        a += b
         d ^= a
-        d = self.circular_left(d, 8)
-        c = np.add(c, d).astype(np.uint32)
+        d = circular_left(d, 8)
+        c += d
         b ^= c
-        b = self.circular_left(b, 7)
+        b = circular_left(b, 7)
         return (a, b, c, d)
 
     def rounds(self, block):
