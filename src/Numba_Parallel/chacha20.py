@@ -49,6 +49,7 @@ class ChaCha20:
         def circular_left(num, i):
             return ((num << i) & 0xFFFFFFFF) | (num >> (32 - i))
 
+        # a, b, c, d are numpy uint32. The addition may overflow which is ok for ChaCha20
         a += b
         d ^= a
         d = circular_left(d, 16)
